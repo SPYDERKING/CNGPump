@@ -1,0 +1,708 @@
+openapi: 3.0.0
+info:
+  title: AI-Powered Smart CNG Pump Appointment System API
+  description: Backend API for the Smart CNG Pump Appointment, E-Token & Queue Management System
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@smartpump.example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8000
+    description: Development server
+  - url: https://api.smartpump.example.com
+    description: Production server
+
+tags:
+  - name: users
+    description: User management operations
+  - name: pumps
+    description: Pump management operations
+  - name: bookings
+    description: Booking management operations
+  - name: tokens
+    description: E-Token management operations
+  - name: payments
+    description: Payment processing operations
+  - name: reminders
+    description: Reminder notification operations
+  - name: ai-predictions
+    description: AI-powered demand prediction operations
+  - name: sms
+    description: SMS and IVR handling operations
+
+paths:
+  /api/users/register:
+    post:
+      tags:
+        - users
+      summary: Register a new user
+      description: Create a new user account in the system
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '200':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: User already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/users/login:
+    post:
+      tags:
+        - users
+      summary: Login user
+      description: Authenticate user and return access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserLogin'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Token'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/pumps/:
+    get:
+      tags:
+        - pumps
+      summary: Get all pumps
+      description: Retrieve a list of all available pumps
+      parameters:
+        - name: skip
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        '200':
+          description: List of pumps
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Pump'
+    post:
+      tags:
+        - pumps
+      summary: Create a new pump
+      description: Create a new pump station (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PumpCreate'
+      responses:
+        '200':
+          description: Pump created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pump'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/pumps/{pump_id}:
+    get:
+      tags:
+        - pumps
+      summary: Get a specific pump
+      description: Retrieve details of a specific pump by ID
+      parameters:
+        - name: pump_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Pump details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pump'
+        '404':
+          description: Pump not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+        - pumps
+      summary: Update a pump
+      description: Update details of a specific pump (admin only)
+      parameters:
+        - name: pump_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PumpCreate'
+      responses:
+        '200':
+          description: Pump updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pump'
+        '404':
+          description: Pump not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - pumps
+      summary: Delete a pump
+      description: Delete a specific pump (admin only)
+      parameters:
+        - name: pump_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Pump deleted successfully
+        '404':
+          description: Pump not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/bookings/:
+    get:
+      tags:
+        - bookings
+      summary: Get user bookings
+      description: Retrieve all bookings for a specific user
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of user bookings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Booking'
+    post:
+      tags:
+        - bookings
+      summary: Create a new booking
+      description: Create a new booking for a user at a specific pump
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingCreate'
+      responses:
+        '200':
+          description: Booking created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '400':
+          description: Invalid data or slot not available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/bookings/{booking_id}:
+    get:
+      tags:
+        - bookings
+      summary: Get a specific booking
+      description: Retrieve details of a specific booking by ID
+      parameters:
+        - name: booking_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Booking details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '404':
+          description: Booking not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+        - bookings
+      summary: Update a booking
+      description: Update details of a specific booking
+      parameters:
+        - name: booking_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingUpdate'
+      responses:
+        '200':
+          description: Booking updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '404':
+          description: Booking not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - bookings
+      summary: Cancel a booking
+      description: Cancel a specific booking
+      parameters:
+        - name: booking_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Booking cancelled successfully
+        '404':
+          description: Booking not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/bookings/{pump_id}/slots/{slot_date}:
+    get:
+      tags:
+        - bookings
+      summary: Get available slots
+      description: Retrieve available time slots for a pump on a specific date
+      parameters:
+        - name: pump_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: slot_date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: List of available time slots
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+
+  /api/tokens/generate/{booking_id}:
+    post:
+      tags:
+        - tokens
+      summary: Generate e-token
+      description: Generate an e-token with QR code for a booking
+      parameters:
+        - name: booking_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Token generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    $ref: '#/components/schemas/Token'
+                  qr_code:
+                    type: string
+        '404':
+          description: Booking not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/tokens/validate/{token_code}:
+    post:
+      tags:
+        - tokens
+      summary: Validate token
+      description: Validate an e-token by its code
+      parameters:
+        - name: token_code
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Token validation result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  message:
+                    type: string
+                  token:
+                    $ref: '#/components/schemas/Token'
+
+  /api/payments/order:
+    post:
+      tags:
+        - payments
+      summary: Create payment order
+      description: Create a payment order with the payment gateway
+      parameters:
+        - name: amount
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: currency
+          in: query
+          schema:
+            type: string
+            default: INR
+      responses:
+        '200':
+          description: Payment order created successfully
+        '500':
+          description: Payment order creation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        full_name:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        vehicle_number:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum: [super_admin, pump_admin, user]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    UserCreate:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        full_name:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        vehicle_number:
+          type: string
+          nullable: true
+
+    UserLogin:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    Token:
+      type: object
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+
+    Pump:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        address:
+          type: string
+        city:
+          type: string
+        latitude:
+          type: number
+          format: float
+          nullable: true
+        longitude:
+          type: number
+          format: float
+          nullable: true
+        total_capacity:
+          type: integer
+        remaining_capacity:
+          type: integer
+        walkin_lanes:
+          type: integer
+        booked_lanes:
+          type: integer
+        rating:
+          type: number
+          format: float
+          nullable: true
+        is_open:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    PumpCreate:
+      type: object
+      required:
+        - name
+        - address
+        - city
+      properties:
+        name:
+          type: string
+        address:
+          type: string
+        city:
+          type: string
+        latitude:
+          type: number
+          format: float
+          nullable: true
+        longitude:
+          type: number
+          format: float
+          nullable: true
+        total_capacity:
+          type: integer
+          default: 1000
+        remaining_capacity:
+          type: integer
+          default: 1000
+        walkin_lanes:
+          type: integer
+          default: 2
+        booked_lanes:
+          type: integer
+          default: 2
+        rating:
+          type: number
+          format: float
+          default: 4.0
+        is_open:
+          type: boolean
+          default: true
+
+    Booking:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        pump_id:
+          type: string
+          format: uuid
+        slot_date:
+          type: string
+          format: date
+        slot_time:
+          type: string
+        fuel_quantity:
+          type: number
+          format: float
+        amount:
+          type: number
+          format: float
+        payment_status:
+          type: string
+          enum: [pending, success, failed]
+        booking_status:
+          type: string
+          enum: [active, confirmed, completed, cancelled, expired]
+        confirmation_status:
+          type: string
+          enum: [pending, coming, not_coming]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    BookingCreate:
+      type: object
+      required:
+        - user_id
+        - pump_id
+        - slot_date
+        - slot_time
+        - fuel_quantity
+        - amount
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        pump_id:
+          type: string
+          format: uuid
+        slot_date:
+          type: string
+          format: date
+        slot_time:
+          type: string
+        fuel_quantity:
+          type: number
+          format: float
+          default: 10.0
+        amount:
+          type: number
+          format: float
+
+    BookingUpdate:
+      type: object
+      properties:
+        payment_status:
+          type: string
+          enum: [pending, success, failed]
+        booking_status:
+          type: string
+          enum: [active, confirmed, completed, cancelled, expired]
+        confirmation_status:
+          type: string
+          enum: [pending, coming, not_coming]
+
+    Error:
+      type: object
+      properties:
+        detail:
+          type: string
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - bearerAuth: []
